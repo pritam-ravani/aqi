@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How much are you losing?</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        body.light {
+            background: #fff;
+            color: #000;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: 2px solid #333;
+            color: #fff;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        body.light .theme-toggle {
+            border-color: #ddd;
+            color: #000;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .loading {
+            font-size: 1.2em;
+            color: #888;
+        }
+
+        body.light .loading {
+            color: #666;
+        }
+
+        .result-number {
+            font-size: 10em;
+            font-weight: 200;
+            color: #00bc8c;
+            margin: 40px 0;
+            line-height: 1;
+        }
+
+        .unit {
+            font-size: 2em;
+            color: #888;
+            margin-top: 10px;
+        }
+
+        body.light .unit {
+            color: #666;
+        }
+
+        .location {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .location:hover {
+            color: #00bc8c;
+        }
+
+        body.light .location {
+            color: #999;
+        }
+
+        body.light .location:hover {
+            color: #00bc8c;
+        }
+
+        .change-hint {
+            font-size: 0.85em;
+            color: #555;
+            margin-top: 5px;
+        }
+
+        body.light .change-hint {
+            color: #aaa;
+        }
+
+        .city-selector {
+            margin: 40px 0;
+        }
+
+        .city-input {
+            background: #1a1a1a;
+            border: 2px solid #333;
+            color: #fff;
+            padding: 15px 20px;
+            font-size: 1.2em;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        body.light .city-input {
+            background: #f5f5f5;
+            border-color: #ddd;
+            color: #000;
+        }
+
+        .city-input:focus {
+            outline: none;
+            border-color: #00bc8c;
+        }
+
+        .description {
+            font-size: 1em;
+            color: #888;
+            line-height: 1.6;
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 1px solid #222;
+        }
+
+        body.light .description {
+            color: #666;
+            border-top-color: #e0e0e0;
+        }
+
+        .fake-ad {
+            margin-top: 60px;
+            padding: 30px;
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 8px;
+        }
+
+        body.light .fake-ad {
+            background: #f9f9f9;
+            border-color: #e0e0e0;
+        }
+
+        .ad-label {
+            font-size: 0.7em;
+            color: #555;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ad-content {
+            color: #999;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        .ad-cta {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 25px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #00bc8c;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+
+        body.light .ad-cta {
+            background: #fff;
+            border-color: #ddd;
+        }
+
+        .ad-cta:hover {
+            border-color: #00bc8c;
+            background: #0a0a0a;
+        }
+
+        body.light .ad-cta:hover {
+            background: #f5f5f5;
+        }
+
+        body.light .ad-content strong {
+            color: #000 !important;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .result-number {
+                font-size: 6em;
+            }
+            .unit {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+    
+    <div class="container">
+        <div id="loadingState">
+            <div class="loading">Detecting your location...</div>
+        </div>
+
+        <div id="citySelector" class="hidden">
+            <input type="text" 
+                   class="city-input" 
+                   id="cityInput" 
+                   placeholder="Enter your city"
+                   list="citySuggestions">
+            <datalist id="citySuggestions">
+                <option value="Delhi, India">
+                <option value="Mumbai, India">
+                <option value="Beijing, China">
+                <option value="New York, USA">
+                <option value="Los Angeles, USA">
+                <option value="London, UK">
+                <option value="Paris, France">
+                <option value="Tokyo, Japan">
+                <option value="Seoul, South Korea">
+                <option value="Mexico City, Mexico">
+            </datalist>
+        </div>
+
+        <div id="resultState" class="hidden">
+            <div class="location" id="locationName" onclick="changeCity()"></div>
+            <div class="change-hint">(click to change location)</div>
+            <div class="result-number" id="resultNumber">-</div>
+            <div class="unit">years lost</div>
+            
+            <div class="description">
+                <p>Based on current air quality levels in your area.</p>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9em;">Air pollution reduces global life expectancy by an average of 2.2 years per person.</p>
+            </div>
+
+            <div class="fake-ad">
+                <div class="ad-label">Advertisement</div>
+                <div class="ad-content">
+                    <strong style="color: #fff;">AirPure Pro™ - Breathe Better, Live Longer</strong>
+                    <p style="margin-top: 10px;">Medical-grade air purifier removes 99.97% of pollutants. Get back those lost years!</p>
+                    <a href="#" class="ad-cta">Shop Now →</a>
+                </div>
+            </div>
+
+            <div class="fake-ad" style="margin-top: 30px;">
+                <div class="ad-label">Sponsored</div>
+                <div class="ad-content">
+                    <strong style="color: #fff;">Move to Norway</strong>
+                    <p style="margin-top: 10px;">Cleanest air in the world. Zero pollution. Free healthcare. Your lungs will thank you.</p>
+                    <a href="#" class="ad-cta">Learn More →</a>
+                </div>
+            </div>
+
+            <div class="fake-ad" style="margin-top: 30px;">
+                <div class="ad-label">Advertisement</div>
+                <div class="ad-content">
+                    <strong style="color: #fff;">Life Insurance You Actually Need</strong>
+                    <p style="margin-top: 10px;">Because breathing shouldn't be this risky. Protect your family today.</p>
+                    <a href="#" class="ad-cta">Get Quote →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cityAQI = {
+            'Delhi': 250, 'Mumbai': 180, 'Beijing': 160, 'New York': 50,
+            'Los Angeles': 80, 'London': 60, 'Paris': 55, 'Tokyo': 45,
+            'Seoul': 70, 'Mexico City': 120
+        };
+
+        function aqiToYearsLost(aqi) {
+            if (aqi <= 50) return 0;
+            if (aqi <= 100) return 0.5;
+            if (aqi <= 150) return 1.2;
+            if (aqi <= 200) return 2.1;
+            if (aqi <= 300) return 3.5;
+            return 5.5;
+        }
+
+        function showResult(location, years) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('citySelector').classList.add('hidden');
+            document.getElementById('resultState').classList.remove('hidden');
+            document.getElementById('locationName').textContent = location;
+            document.getElementById('resultNumber').textContent = years.toFixed(1);
+        }
+
+        function changeCity() {
+            document.getElementById('resultState').classList.add('hidden');
+            document.getElementById('citySelector').classList.remove('hidden');
+            document.getElementById('cityInput').value = '';
+            document.getElementById('cityInput').focus();
+        }
+
+        function getLocationAndShow() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        setTimeout(() => {
+                            const cities = ['Delhi', 'Mumbai', 'Beijing', 'New York', 'London'];
+                            const randomCity = cities[Math.floor(Math.random() * cities.length)];
+                            const aqi = cityAQI[randomCity];
+                            const years = aqiToYearsLost(aqi);
+                            showResult(randomCity, years);
+                        }, 1500);
+                    },
+                    () => {
+                        document.getElementById('loadingState').classList.add('hidden');
+                        document.getElementById('citySelector').classList.remove('hidden');
+                    }
+                );
+            } else {
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('citySelector').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('cityInput').addEventListener('change', function(e) {
+            const input = e.target.value;
+            let cityName = input.split(',')[0].trim();
+            
+            let aqi = cityAQI[cityName] || 100;
+            let years = aqiToYearsLost(aqi);
+            
+            setTimeout(() => {
+                showResult(input, years);
+            }, 800);
+        });
+
+        // Theme toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('light');
+            if (body.classList.contains('light')) {
+                themeToggle.textContent = '☀️';
+            } else {
+                themeToggle.textContent = '🌙';
+            }
+        });
+
+        getLocationAndShow();
+    </script>
+</body>
+</html>
